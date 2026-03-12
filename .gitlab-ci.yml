@@ -1,0 +1,30 @@
+stages:
+  - check
+  - mirror
+
+checks:
+  stage: check
+  script:
+    - uv run poe checks
+    - uv run pytest --junitxml=junit.xml
+    - uv run poe cover
+    - uv run coverage xml
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    when: always
+    reports:
+      junit: junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+mirror:
+  stage: mirror
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  script:
+    - git checkout -B main
+    - git push --mirror git@github.com:engineering-with-ai/software-python-mcp-server.git
+  only:
+    - main

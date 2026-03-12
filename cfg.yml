@@ -1,0 +1,17 @@
+local:
+  log_level: DEBUG
+  neo4j:
+    uri: bolt://localhost:7687
+    user: neo4j
+    database: neo4j
+  postgres:
+    embeddings_table: energy_embeddings
+
+beta:
+  log_level: INFO
+  neo4j:
+    uri: bolt://localhost:7687
+    user: neo4j
+    database: neo4j
+  postgres:
+    embeddings_table: energy_embeddings
