@@ -25,6 +25,6 @@ mirror:
     GIT_DEPTH: 0
   script:
     - git checkout -B main
-    - git push --mirror git@github.com:engineering-with-ai/software-python-mcp-server.git
+    - git push --mirror git@github.com:engineering-with-ai/python-mcp-server.git
   only:
     - main
