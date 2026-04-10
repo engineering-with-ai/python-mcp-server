@@ -107,6 +107,9 @@ When engaging in TDD:
 5. Make the smallest change until it passes.
 
 - **Use AAA (Arrange, Act, Assert) pattern for all tests.**
+- **Unit tests colocated in `src/`.**
+- **Integration tests in `tests/`.**
+- **Use testcontainers for integration tests** — spin up real databases/services in Docker, session-scoped for performance.
 - **Fail fast, fail early.** Detect errors as early as possible and halt. Rely on the runtime to handle the error and provide a stack trace. Do NOT write defensive error handling without a good reason.
 
 
