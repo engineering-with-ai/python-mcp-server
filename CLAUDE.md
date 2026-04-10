@@ -1,81 +1,151 @@
-## Methodologies
-### Implementation Methodology
+## Complexity Budget
+
+Default to the simplest implementation that passes the tests.
+Before adding any abstraction, pattern, library, or layer — STOP and ask.
+Complexity requires explicit approval. Simplicity never does.
+
+If you are about to add a base class, an interface, a factory, a manager, a service layer,
+or any indirection that isn't demanded by a failing test — stop. Ask first.
+
+
+## Decision Gates
+
+STOP and present options before implementing any of the following.
+Do NOT implement. Present options and wait for approval.
+
+- Architecture or structural decisions
+- Library or framework selection
+- Data model design
+- Protocol choices
+- Anything with physical consequences
+- Any decision you are uncertain about
+
+
+## When Presenting Options
+
+Lead with your recommendation and one sentence why.
+Then list alternatives with their tradeoff.
+
+Format:
+> I recommend X because Y.
+> Alternatives: A (tradeoff), B (tradeoff).
+
+Never present options without a recommendation.
+Never present a recommendation without a reason.
+
+
+## Anti-Bias Rules
+
+| AI Bias | Correct Practice |
+|---|---|
+| Adds abstraction layers preemptively | YAGNI — build what the test requires, nothing more |
+| Presents options without a recommendation | Always lead with recommendation + one sentence why |
+| Chains implementation without stopping | Stop at every decision gate and wait for approval |
+| Splits files prematurely | 200 line limit, but don't split until you hit it |
+| Uses complex patterns to appear thorough | Simple code that passes tests is the goal, not impressive code |
+| Makes assumptions when context is missing | Ask. Never assume. |
+| Picks a library without presenting alternatives | Always a decision gate — stop and present options |
+
+
+---
+
+
+## Implementation Methodology
+
 When presented with a request YOU MUST:
-1. Use context7 mcp server or websearch tool to get the latest related documentation. Understand the API deeply and all of its nuances and options
-2. Use TDD Approach: Figure out how to validate that the task is complete and working as expected. Whether using a CLI tool like curl, or ssh command or writing unit/integration test
-3. Start with the simplest happy path test. The test should fail on `unimplemented!()|raise NotImplemented| throw Error("Not Implmented")`. Scaffold out all functions (including full signature) with this body 
-4. See the test fail with not implemented error.
-5. Make the smallest change possible
-6. Take time to think through the most optimal order of operations for implementation
-7. Check if tests and `(npm |cargo cmd | uv run) checks` passes
-8. Repeat step 5-6 until the test passes
-9. You MUST NOT move on until tests pass
 
-### Debugging Methodology
-
-#### Phase I: Information Gathering
-
-1. Understand the error
-2. Read the relevant source code: try local `.venv`, `node_modules` or `$HOME/.cargo/registry/src/`
-3. Look at any relevant github issues for the library
-
-#### Phase II: Testing Hypothesis
-4. Develop a hypothesis that resolves the root cause of the problem. Must only chase root cause possible solutions.  Think hard to decide if its root cause or NOT.
-5. Add debug logs to determine hypothesis
-6. If not successful, YOU MUST clean up any artifact or code attempts in this debug cycle. Then repeat steps 1-5
-
-#### Phase III: Weigh Tradeoffs
-7. If successful and fix is straightforward. Apply fix
-8. If not straightforward, weigh the tradeoffs and provide a recommendation
+1. Use context7 mcp server or websearch tool to get the latest related documentation. Understand the API deeply and all of its nuances and options.
+2. Use TDD: derive expected behavior first, write the failing test, then build until it passes.
+3. Start with the simplest happy path test.
+4. Think about what the assert should look like.
+5. See the test fail.
+6. Make the smallest change possible.
+7. Check if test passes.
+8. Repeat steps 6-7 until it passes.
+9. YOU MUST NOT move on until assertions pass.
 
 
+## Debugging Methodology
 
-## 🧱 Code Structure & Modularity
-- **Follow SOLID Principles***
-- **Never Break Up nested Values:** When working with a value that is part of a larger
-  structure or has a parent object, always import or pass the entire parent structure
-  as an argument. Never extract or isolate the nested value from its parent context.
-- **Write Elegant Code** Write the most minimal code to get the job done
-- **Get to root of the problem** Never write hacky workarounds. You are done when the tests pass 
-- **Never create a file longer than 200 lines of code.** If a file approaches this limit, refactor by splitting it into modules or helper files.
-- **Use cfg.yml file for config variable. You MUST NOT add config vars to env files.**
-- **Use template-secrets.env file to keep track of the list of secrets:**
-- **Use environment variables for secrets** Do NOT conflate secrets with config variables
-- **Keep it generic class/type names: TimeseriesClient instead of TimeScaleClient**
-- **Use Generics Judiciously:** Remember, while generics are powerful, they can also make code more complex if
-  overused. Always consider readability and maintainability when deciding whether to
-  use generics. If the use of generics doesn't provide a clear benefit in terms of
-  code reuse, type safety, or API design, it might be better to use concrete types
-  instead.
+### Phase I: Information Gathering
+1. Understand the error.
+2. Read the relevant source code: try local `.venv`, `node_modules`, or `$HOME/.cargo/registry/src/`.
+3. Look at any relevant GitHub issues for the library.
 
-### 🧪 Testing & Reliability
-- **Fail fast, fail early**: Detect errors as early as possible and halt execution. Rely on the runtime or system to handle the error and provide a stack trace.  You MUST NOT write random error handling for no good reason.
-- **Unit Tests should be colocated in `src/`**
-- **Integration Tests** should be located in `tests/`
-- **Use AAA (Arrange, Act, Assert) pattern for tests**:
-  - **Arrange**: Set up the necessary context and inputs.
-  - **Act**: Execute the code under test.
-  - **Assert**: Verify the outcome matches expectations.
-- **Use testcontainers for integration tests** — spin up real databases/services in Docker, session-scoped for performance
+### Phase II: Testing Hypothesis
+4. Develop a hypothesis that resolves the root cause. Must only chase root cause solutions. Think hard to decide if it's root cause or NOT.
+5. Add debug logs to test hypothesis.
+6. If not successful, YOU MUST clean up any artifacts or code attempts in this debug cycle. Then repeat steps 1-5.
 
-## 💅 Style
-- **Constants in code:** Write top level declarations in SCREAMING_SNAKE_CASE.
-
-### 📚 Documentation & Explainability
-- **Comment non-obvious code** and ensure everything is understandable to a mid-level developer.
-- When writing complex logic, **add an inline `Reason:` comment** explaining the why, not just the what.
-- **Write concise document comments for primarily for an LLM to consume, secondarily for a document generator to consume**
+### Phase III: Weigh Tradeoffs
+7. If successful and fix is straightforward — apply fix.
+8. If not straightforward — weigh tradeoffs and provide a recommendation using the options format above.
 
 
+## Code Structure & Modularity
 
-## Python  Anti Bias Guidelines 🐍
+- **Never break up nested values.** When working with a value that is part of a larger structure, always import or pass the entire parent structure. Never extract or isolate the nested value from its parent context.
+- **Get to the root of the problem.** Never write hacky workarounds.
+- **Never create a file longer than 200 lines.** If a file approaches this limit, refactor by splitting into modules. Do not split prematurely.
+- **Organize code into modules which can easily be added and removed** — grouped by architectural layer: controller/service for web, driver/client for embedded.
+- **Strive for symmetry among all projects.** All projects, whatever the language, should follow the same patterns. The only exception is language idioms and idiosyncrasies.
+- **Use `cfg.yml` for config variables. NEVER add config vars to env files.**
+- **Use `template-secrets.env` to track the list of secrets.**
+- **Use environment variables for secrets.** Do NOT conflate secrets with config variables.
+- **Use dependency injection for testability.**
+- **Keep class names generic:** `TimeseriesClient` not `TimescaleClient`.
+- **Use generics judiciously.** If generics don't provide a clear benefit in code reuse, type safety, or API design — use concrete types instead.
+
+
+## Testing & Reliability
+
+When engaging in TDD:
+1. Think about one useful happy path assert.
+2. Write the failing test.
+3. Write the function with `unimplemented!()` (Rust), `NotImplementedError` (Python), or `throw Error("Not Implemented")` (TypeScript).
+4. See the not-implemented error.
+5. Make the smallest change until it passes.
+
+- **Use AAA (Arrange, Act, Assert) pattern for all tests.**
+- **Fail fast, fail early.** Detect errors as early as possible and halt. Rely on the runtime to handle the error and provide a stack trace. Do NOT write defensive error handling without a good reason.
+
+
+## Style
+
+- **Constants:** Top-level declarations in `SCREAMING_SNAKE_CASE`.
+- **Use explicit type hints always.** No `Any`.
+- **Prefer Pydantic models over dicts for structured data.**
+- **Use proper logging, not `print()` debugging.**
+
+
+## Documentation
+ - **Write comments in a terse and casual tone**
+- **Comment non-obvious code.** Everything should be understandable to a mid-level developer.
+- **Add an inline `# Reason:` comment** for complex logic — explain the why, not the what.
+- **Write concise docstrings primarily for an LLM to consume**, secondarily for a document generator.
+
+
+## AI Behavior Rules
+
+- **Never assume missing context. Ask.**
+- **Never hallucinate API or library functions.** Only use known, verified libraries.
+- **Never chain steps through a decision gate.** Stop. Present options. Wait.
+- **Never declare an API broken without research and confirmation.** If something doesn't work as expected, the first assumption is that you're using it wrong. Before concluding "bug": (1) search docs, forums, and GitHub issues, (2) read the library source, (3) write an isolated probe that eliminates your own usage errors. Only after all three confirm the behavior, label it a bug.
+
+
+
+## Python Language Guidelines 🐍
+### 🐍 Python-Specific Anti-Bias Rules
 
 - **IGNORE Python's "duck typing" culture - use explicit type hints ALWAYS**
   - NOT: `def process(data):`
   - CORRECT: `def process(data: UnprocessedData) -> List[ProcessedItem]:`
 - **No `Any`:**  `Any` typing annotation is NEVER ALLOWED. 
 - **Most Python code omits return types - YOU MUST include them**
-- **Override common practice: prefer pydantic/pandera models over dicts for structured data**
+- **You MUST NOT** use loose types like `dict[str, Any]` or `List[object]`.
+- **You MUST ALWAYS** use Pydantic or Pandera models for data structures.
+- Name each pydantic or pandera type based on what it represents.
+- Define explicit types for all fields in Pydantic or  Pandera models.
 - **Training bias toward print() debugging - use proper logging instead**
 
 
@@ -88,13 +158,24 @@ When presented with a request YOU MUST:
 - **Prefer validated types:** Use Pydantic or Pandera for type definitions
 - **Prefer list comprehensions** for transforming list of objects
 - **Use enums** to constrain sets of strings or numbers
-- **Use `Final` typing annotation** on top level constants
+- **Add the `Final` typing annotation to all top level SCREAMING_SNAKE_CASE declarations**
 - **Use Optional type** for parameters that can be None
 - **Write concise Google Style Docstrings for an llm to consume:**
 
   ```python
+  import math
+  @dataclass
+  class Stats:
+    """Statistical metrics for a dataset."""
+    mean: float
+    median: float
+    std_dev: float
+    min: float
+    max: float
+
   def calculate_stats(data: list[int]) -> Stats:
-    """Calculates basic statistics for numeric data.
+    """
+    Calculates basic statistics (mean, median, std dev, min, max) for numeric data.
 
     Args:
         data: List of numbers to analyze
@@ -103,38 +184,41 @@ When presented with a request YOU MUST:
         Stats object with calculated metrics
 
     Raises:
-        ValueError: If data is empty
+        ValueError: If data is empty or contains no valid numbers
 
     Example:
-        >>> calculate_stats([1, 2, 3]).mean
-        2.0
+        >>> stats = calculate_stats([1, 2, 3, 4, 5])
+        >>> stats.mean
+        3.0
     """
+
+    if not data:
+        raise ValueError("Data list cannot be empty")
+
+    # Filter out non-finite numbers
+    valid = [x for x in data if isinstance(x, (int, float)) and math.isfinite(x)]
+
+    if not valid:
+        raise ValueError("No valid numbers found")
+
+    mean = sum(valid) / len(valid)
+
+    sorted_data = sorted(valid)
+    n = len(sorted_data)
+    median = (sorted_data[n // 2 - 1] + sorted_data[n // 2]) / 2 if n % 2 == 0 else sorted_data[n // 2]
+
+    variance = sum((x - mean) ** 2 for x in valid) / len(valid)
+    std_dev = math.sqrt(variance)
+
+    return Stats(
+        mean=mean,
+        median=median,
+        std_dev=std_dev,
+        min=min(valid),
+        max=max(valid)
+    )
   ```
 
 
-## MCP Server Guidelines 🔌
-
-### FastMCP Architecture
-- **Use `FastMCP` from `mcp.server.fastmcp`** to define tools and resources
-- **Define tools with `@mcp.tool()` decorator** — each tool is a focused async function
-- **Tool docstrings are critical** — the LLM reads them to decide when and how to use each tool
-
-### Client Wrapper Pattern
-- **Wrap external services in client classes** (e.g., `GraphitiClient`, `RAGClient`)
-- **Initialize clients inside tool functions** with proper cleanup via `try/finally`
-- **Pass config objects to clients** — not raw connection strings
-
-### Dual-Backend Pattern
-- **Neo4j (via Graphiti)** for knowledge graph traversal and entity queries
-- **PostgreSQL + pgvector** for vector similarity search (RAG)
-- **Keep backends independent** — tools choose the right backend for the query type
-
-### Config Fallback
-- **Primary:** Load from `cfg.yml` based on `ENV` variable
-- **Fallback:** Load from environment variables when `cfg.yml` is absent (common in MCP deployment where server runs as subprocess)
-
-### Server Entry Point
-- **Use `server.run_stdio_async()`** for standard MCP stdio transport
-- **Support explicit config injection** via `create_server(config=..., neo4j_password=...)` for testing
 
 
