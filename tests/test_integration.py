@@ -3,6 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
+from src.python_mcp_server.clients.embedder import Embedder
 from src.python_mcp_server.clients.graphiti_client import GraphitiClient
 from src.python_mcp_server.clients.rag_client import RAGClient
 from src.python_mcp_server.config import Config, Neo4jConfig, PostgresConfig, LogLevel
@@ -61,7 +62,14 @@ class TestRAGClient:
     async def test_rag_client_vector_search_returns_results(self) -> None:
         """Test that RAG client can perform vector search."""
         # Arrange
-        test_config = PostgresConfig(embeddings_table="energy_embeddings")
+        test_config = PostgresConfig(
+            host="localhost",
+            port=5432,
+            database="test",
+            user="test",
+            embeddings_table="energy_embeddings",
+            embedding_model="text-embedding-3-small",
+        )
         with (
             patch(
                 "src.python_mcp_server.clients.rag_client.asyncpg.connect"
@@ -80,7 +88,8 @@ class TestRAGClient:
                 }
             ]
 
-            client = RAGClient(test_config)
+            embedder = AsyncMock(spec=Embedder)
+            client = RAGClient(test_config, embedder=embedder)
             query_embedding = [0.1, 0.2, 0.3]
 
             # Act
@@ -96,7 +105,14 @@ class TestRAGClient:
     async def test_rag_client_queries_energy_embeddings_table(self) -> None:
         """Test that RAG client queries energy_embeddings table with proper schema."""
         # Arrange
-        test_config = PostgresConfig(embeddings_table="energy_embeddings")
+        test_config = PostgresConfig(
+            host="localhost",
+            port=5432,
+            database="test",
+            user="test",
+            embeddings_table="energy_embeddings",
+            embedding_model="text-embedding-3-small",
+        )
         with (
             patch(
                 "src.python_mcp_server.clients.rag_client.asyncpg.connect"
@@ -118,7 +134,8 @@ class TestRAGClient:
                 }
             ]
 
-            client = RAGClient(test_config)
+            embedder = AsyncMock(spec=Embedder)
+            client = RAGClient(test_config, embedder=embedder)
             query_embedding = [0.1] * 1536
 
             # Act
@@ -171,7 +188,7 @@ class TestMCPServer:
         # Check the tool has the expected description
         search_tool = next(tool for tool in tools if tool.name == "search_knowledge")
         description = search_tool.description or ""
-        assert "USE THIS WHEN" in description
+        assert "USE WHEN" in description
         assert "verified facts" in description
 
     @pytest.mark.asyncio
@@ -251,7 +268,7 @@ class TestMCPServer:
                 content_text = str(first_content)
 
         assert "ALWAYS verify facts" in content_text
-        assert "prevents hallucination" in content_text
+        assert "Cite your sources" in content_text
 
     def test_create_server_with_explicit_config(self) -> None:
         """Test that create_server accepts explicit config parameters."""
@@ -261,14 +278,21 @@ class TestMCPServer:
             neo4j=Neo4jConfig(
                 uri="bolt://test:7687", user="test_user", database="test_db"
             ),
-            postgres=PostgresConfig(embeddings_table="test_table"),
+            postgres=PostgresConfig(
+                host="localhost",
+                port=5432,
+                database="test",
+                user="test",
+                embeddings_table="test_table",
+                embedding_model="text-embedding-3-small",
+            ),
         )
 
         # Act
         server = create_server(
             config=test_config,
             neo4j_password="test_password",  # noqa: S106
-            postgres_url="postgresql://test:test@localhost:5432/test",
+            postgres_password="test_pw",  # noqa: S106,
         )
 
         # Assert
@@ -284,7 +308,14 @@ class TestMCPServer:
             neo4j=Neo4jConfig(
                 uri="bolt://test:7687", user="test_user", database="test_db"
             ),
-            postgres=PostgresConfig(embeddings_table="test_table"),
+            postgres=PostgresConfig(
+                host="localhost",
+                port=5432,
+                database="test",
+                user="test",
+                embeddings_table="test_table",
+                embedding_model="text-embedding-3-small",
+            ),
         )
 
         with (
@@ -307,7 +338,7 @@ class TestMCPServer:
             server = create_server(
                 config=test_config,
                 neo4j_password="test_password",  # noqa: S106
-                postgres_url="postgresql://test:test@localhost:5432/test",
+                postgres_password="test_pw",  # noqa: S106,
             )
             _content, result_data = await server.call_tool(
                 "search_knowledge", {"query": "test query", "limit": 5}

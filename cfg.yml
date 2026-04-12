@@ -5,7 +5,12 @@ local:
     user: neo4j
     database: neo4j
   postgres:
+    host: localhost
+    port: 5432
+    database: knowledge
+    user: postgres
     embeddings_table: energy_embeddings
+    embedding_model: text-embedding-3-small
 
 beta:
   log_level: INFO
@@ -14,4 +19,9 @@ beta:
     user: neo4j
     database: neo4j
   postgres:
+    host: localhost
+    port: 5432
+    database: knowledge
+    user: postgres
     embeddings_table: energy_embeddings
+    embedding_model: text-embedding-3-small

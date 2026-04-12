@@ -63,17 +63,12 @@ class Document(BaseModel):
     )
 
 
-class FactVerification(BaseModel):
-    """Result of fact verification against knowledge graph."""
+class FactEvidence(BaseModel):
+    """Graph evidence relevant to a statement. Caller judges entailment."""
 
-    statement: str = Field(description="The statement that was verified")
-    verified: bool = Field(description="Whether the fact was verified")
-    confidence: float = Field(description="Confidence level of verification (0.0-1.0)")
+    statement: str = Field(description="The statement the evidence was gathered for")
     evidence: list[SearchResult] = Field(
-        description="Supporting evidence from knowledge graph"
-    )
-    suggestion: Optional[str] = Field(
-        None, description="Alternative suggestion if fact not found"
+        description="Related facts from the knowledge graph, ranked by relevance"
     )
 
 

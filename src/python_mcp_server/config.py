@@ -28,7 +28,12 @@ class Neo4jConfig(BaseModel):
 class PostgresConfig(BaseModel):
     """PostgreSQL database configuration settings."""
 
+    host: str
+    port: int
+    database: str
+    user: str
     embeddings_table: str
+    embedding_model: str
 
 
 class Config(BaseModel):
@@ -44,55 +49,14 @@ class _ConfigMap(BaseModel):
     beta: Config
 
 
-def load_config_from_env() -> Config:
-    """Load configuration from environment variables only.
-
-    Returns:
-        Config object created from environment variables with sensible defaults
-
-    Example:
-        >>> config = load_config_from_env()
-        >>> config.neo4j.uri
-        'bolt://localhost:7687'
-
-    """
-    return Config(
-        log_level=LogLevel(os.getenv("LOG_LEVEL", "INFO")),
-        neo4j=Neo4jConfig(
-            uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
-            user=os.getenv("NEO4J_USER", "neo4j"),
-            database=os.getenv("NEO4J_DATABASE", "neo4j"),
-        ),
-        postgres=PostgresConfig(
-            embeddings_table=os.getenv("POSTGRES_TABLE", "embeddings"),
-        ),
-    )
-
-
 def load_config() -> Config:
-    """Load configuration from cfg.yml file based on environment.
-
-    Reads the configuration file and returns the appropriate config
-    based on the ENV environment variable (defaults to 'local').
-    If cfg.yml is not found, falls back to environment variables.
-
-    Returns:
-        Config object for the current environment
+    """Load configuration from cfg.yml based on the ENV env var (default 'local').
 
     Raises:
-        yaml.YAMLError: If cfg.yml contains invalid YAML
-
-    Example:
-        >>> config = load_config()  # Uses ENV=local by default
-        >>> config.log_level
-        <LogLevel.DEBUG: 'DEBUG'>
-
+        FileNotFoundError: If cfg.yml is missing.
+        yaml.YAMLError: If cfg.yml contains invalid YAML.
     """
     cfg_path = Path(__file__).parent.parent.parent / "cfg.yml"
-    if not cfg_path.exists():
-        # Fall back to environment variables if cfg.yml doesn't exist
-        return load_config_from_env()
-
     with open(cfg_path) as file:
         config_map = _ConfigMap(**yaml.safe_load(file))
         environment = os.environ.get("ENV", "local")
