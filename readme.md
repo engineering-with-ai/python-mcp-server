@@ -151,13 +151,21 @@ CREATE TABLE energy_embeddings (
     book TEXT,
     section_level TEXT,
     analysis_relevance TEXT,
-    embedding vector(1536)  -- text-embedding-3-small
+    embedding vector(1536),  -- text-embedding-3-small
+    content_tsv tsvector
+        GENERATED ALWAYS AS (to_tsvector('english', content)) STORED
 );
 
 CREATE INDEX ON energy_embeddings USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX idx_content_tsv ON energy_embeddings USING gin(content_tsv);
 ```
 
 Embedding dimension must match `embedding_model` in `cfg.yml`.
+
+`rag_search` issues two rankings against this table — cosine over `embedding`
+and BM25 over `content_tsv` — and fuses them via Reciprocal Rank Fusion
+(k=60). Exact-term matches (protocol field names, enum values, requirement
+IDs) come through the BM25 leg that pure cosine would miss.
 
 ## Development
 

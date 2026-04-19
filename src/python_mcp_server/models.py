@@ -57,7 +57,9 @@ class Document(BaseModel):
     metadata: DocumentMetadata = Field(
         default_factory=DocumentMetadata, description="Document metadata"
     )
-    similarity_score: float = Field(description="Vector similarity score")
+    similarity_score: float = Field(
+        description="Retrieval relevance score (RRF-fused cosine + BM25)"
+    )
     source: Literal["documents"] = Field(
         default="documents", description="Source type - supporting documents"
     )
