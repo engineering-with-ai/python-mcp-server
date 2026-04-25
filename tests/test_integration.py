@@ -1,7 +1,9 @@
 """Integration tests for MCP server with Graphiti and RAG."""
 
-import pytest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from src.python_mcp_server.clients.embedder import Embedder
 from src.python_mcp_server.clients.graphiti_client import GraphitiClient
@@ -31,13 +33,13 @@ class TestGraphitiClient:
             mock_getenv.return_value = "test_password"
             mock_graphiti = AsyncMock()
             mock_graphiti_class.return_value = mock_graphiti
-            # Create a mock object with proper attributes
-            mock_result = type("MockResult", (), {})()
-            mock_result.uuid = "test"
-            mock_result.id = "test"
-            mock_result.fact = "test result"
-            mock_result.content = "test result"
-            mock_result.score = 0.9
+            mock_result = SimpleNamespace(
+                uuid="test",
+                id="test",
+                fact="test result",
+                content="test result",
+                score=0.9,
+            )
 
             mock_graphiti.search.return_value = [mock_result]
 
@@ -206,13 +208,13 @@ class TestMCPServer:
             mock_getenv.return_value = "test_password"
             mock_graphiti = AsyncMock()
             mock_graphiti_class.return_value = mock_graphiti
-            # Create a mock object with proper attributes
-            mock_result = type("MockResult", (), {})()
-            mock_result.uuid = "test_id"
-            mock_result.id = "test_id"
-            mock_result.fact = "test content"
-            mock_result.content = "test content"
-            mock_result.score = 0.9
+            mock_result = SimpleNamespace(
+                uuid="test_id",
+                id="test_id",
+                fact="test content",
+                content="test content",
+                score=0.9,
+            )
 
             mock_graphiti.search.return_value = [mock_result]
 
@@ -267,6 +269,7 @@ class TestMCPServer:
             else:
                 content_text = str(first_content)
 
+        assert isinstance(content_text, str)
         assert "ALWAYS verify facts" in content_text
         assert "Cite your sources" in content_text
 
@@ -325,12 +328,13 @@ class TestMCPServer:
         ):
             mock_graphiti = AsyncMock()
             mock_graphiti_class.return_value = mock_graphiti
-            mock_result = type("MockResult", (), {})()
-            mock_result.uuid = "test_id"
-            mock_result.id = "test_id"
-            mock_result.fact = "test content"
-            mock_result.content = "test content"
-            mock_result.score = 0.9
+            mock_result = SimpleNamespace(
+                uuid="test_id",
+                id="test_id",
+                fact="test content",
+                content="test content",
+                score=0.9,
+            )
 
             mock_graphiti.search.return_value = [mock_result]
 

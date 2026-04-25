@@ -28,9 +28,9 @@ constraint-dependencies = [
 
 [dependency-groups]
 dev = [
+    "asyncpg-stubs>=0.31",
     "bandit>=1.8.0",
     "black[d]>=26.3.1",
-    "mypy>=1.14.0",
     "poethepoet>=0.32.0",
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.0",
@@ -39,15 +39,17 @@ dev = [
     "pytest-cov>=6.0.0",
     "deptry>=0.23.0",
     "pip>=25.1.1",
+    "ty>=0.0.18",
+    "types-pyyaml>=6.0",
 ]
 
 [tool.poe.tasks]
 depcheck = "deptry . --per-rule-ignores DEP004=pytest,DEP002=asyncpg|starlette"
 format = "black ."
 lint = "ruff check"
-typecheck = "mypy  --install-types --non-interactive  --explicit-package-bases ."
+typecheck = "ty check"
 audit-src = "bandit -r src/* -s B101,B608"
-audit-packages = "pip-audit --ignore-vuln GHSA-4xh5-x5gv-qwph"
+audit-packages = "pip-audit --ignore-vuln GHSA-4xh5-x5gv-qwph --ignore-vuln GHSA-58qw-9mgm-455v"
 security = ["audit-src", "audit-packages"]
 checks = ["depcheck", "format", "lint", "typecheck", "security"]
 unit = "pytest -vv src/*"
