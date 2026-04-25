@@ -57,10 +57,10 @@ class RAGClient:
     async def search(self, query: str, limit: int = 10) -> list[Document]:
         """Hybrid retrieval: cosine + BM25 fused via Reciprocal Rank Fusion.
 
-        Runs two rankings against energy_embeddings — cosine over the embedding
-        column and BM25 over the content_tsv column — then fuses via RRF (k=60).
-        Exact-term matches (protocol field names, enum values, IDs) come through
-        the BM25 leg that pure cosine would miss.
+        Runs two rankings against the embeddings table — cosine over the
+        embedding column and BM25 over the content_tsv column — then fuses
+        via RRF (k=60). Exact-term matches (protocol field names, enum values,
+        IDs) come through the BM25 leg that pure cosine would miss.
         """
         query_embedding = await self.embedder.embed(query)
         conn = await asyncpg.connect(self.db_url)
@@ -68,13 +68,15 @@ class RAGClient:
             await register_vector(conn)
             # Reason: table_name is from cfg.yml, not user input - safe from injection
             cosine_sql = f"""
-                SELECT id, title, content, book, section_level, analysis_relevance
+                SELECT id, title, content, book, section_level, analysis_relevance,
+                       effective_from, effective_until, normative
                 FROM {self.table_name}
                 ORDER BY embedding <=> $1::vector
                 LIMIT $2
                 """  # noqa: S608
             bm25_sql = f"""
-                SELECT id, title, content, book, section_level, analysis_relevance
+                SELECT id, title, content, book, section_level, analysis_relevance,
+                       effective_from, effective_until, normative
                 FROM {self.table_name}
                 WHERE content_tsv @@ plainto_tsquery('english', $1)
                 ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', $1)) DESC
@@ -94,11 +96,7 @@ class RAGClient:
                 id=doc_id,
                 title=str(row.get("title", "")),
                 content=str(row["content"]),
-                metadata=DocumentMetadata(
-                    book=str(row.get("book", "")),
-                    section_level=str(row.get("section_level", "")),
-                    analysis_relevance=str(row.get("analysis_relevance", "")),
-                ),
+                metadata=_build_metadata(row),
                 similarity_score=0.0,
             )
 
@@ -123,6 +121,7 @@ class RAGClient:
             # Reason: table_name is from cfg.yml, not user input - safe from injection
             sql = f"""
                 SELECT id, title, content, book, section_level, analysis_relevance,
+                       effective_from, effective_until, normative,
                        embedding <=> $1::vector as distance
                 FROM {self.table_name}
                 ORDER BY distance
@@ -137,12 +136,28 @@ class RAGClient:
                 id=str(row["id"]),
                 title=str(row.get("title", "")),
                 content=str(row["content"]),
-                metadata=DocumentMetadata(
-                    book=str(row.get("book", "")),
-                    section_level=str(row.get("section_level", "")),
-                    analysis_relevance=str(row.get("analysis_relevance", "")),
-                ),
+                metadata=_build_metadata(row),
                 similarity_score=float(row["distance"]),
             )
             for row in rows
         ]
+
+
+def _build_metadata(row: "asyncpg.Record") -> DocumentMetadata:
+    """Project a knowledge-table row into DocumentMetadata.
+
+    Temporal columns are TIMESTAMPTZ; surface them as ISO strings so the LLM
+    can reason about enforceability without a date library on the client side.
+    `normative` flows through as bool. `effective_until = NULL` means still
+    in force and is preserved as None for the LLM to interpret.
+    """
+    eff_from = row.get("effective_from")
+    eff_until = row.get("effective_until")
+    return DocumentMetadata(
+        book=str(row.get("book", "")),
+        section_level=str(row.get("section_level", "")),
+        analysis_relevance=str(row.get("analysis_relevance", "")),
+        effective_from=eff_from.isoformat() if eff_from is not None else None,
+        effective_until=eff_until.isoformat() if eff_until is not None else None,
+        normative=row.get("normative"),
+    )

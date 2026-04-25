@@ -1,17 +1,15 @@
 [environment]
 python-version = "3.13"
-python = ".venv"
 root = ["./src"]
 
 [rules]
+all = "error"
 unresolved-import = "ignore"
-unused-ignore-comment = "error"
 
 [src]
 include = ["src", "tests"]
 
 [terminal]
-error-on-warning = true
 output-format = "concise"
 
 [analysis]

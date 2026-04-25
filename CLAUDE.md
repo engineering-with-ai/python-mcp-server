@@ -1,3 +1,7 @@
+## Core Directive
+
+Push back, expose my ideas weak spots, don't tell me I'm right unless I'm objectively right.
+
 ## Complexity Budget
 
 Default to the simplest implementation that passes the tests.

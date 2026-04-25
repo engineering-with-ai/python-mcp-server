@@ -46,6 +46,18 @@ class DocumentMetadata(BaseModel):
     analysis_relevance: Optional[str] = Field(
         None, description="Analysis relevance (high/medium/low)"
     )
+    effective_from: Optional[str] = Field(
+        None,
+        description="ISO timestamp from which this content becomes/became authoritative",
+    )
+    effective_until: Optional[str] = Field(
+        None,
+        description="ISO timestamp at which this content was/will be superseded; null = still in force",
+    )
+    normative: Optional[bool] = Field(
+        None,
+        description="True if binding standard, regulation, or law (or incorporated by reference into one)",
+    )
 
 
 class Document(BaseModel):

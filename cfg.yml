@@ -15,13 +15,13 @@ local:
 beta:
   log_level: INFO
   neo4j:
-    uri: bolt://localhost:7687
+    uri: neo4j://173.211.12.43:7687
     user: neo4j
     database: neo4j
   postgres:
-    host: localhost
+    host: 173.211.12.43
     port: 5432
-    database: knowledge
+    database: postgres
     user: postgres
-    embeddings_table: energy_embeddings
+    embeddings_table: knowledge
     embedding_model: text-embedding-3-small
