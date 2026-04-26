@@ -7,9 +7,9 @@ local:
   postgres:
     host: localhost
     port: 5432
-    database: knowledge
+    database: postgres
     user: postgres
-    embeddings_table: energy_embeddings
+    embeddings_table: knowledge
     embedding_model: text-embedding-3-small
 
 beta:
