@@ -2,6 +2,7 @@
 
 import os
 from typing import Final, Optional
+from urllib.parse import quote_plus
 
 import asyncpg
 from pgvector.asyncpg import register_vector
@@ -48,7 +49,7 @@ class RAGClient:
         """
         pwd = password or os.getenv("POSTGRES_PASSWORD", "")
         self.db_url = (
-            f"postgresql://{config.user}:{pwd}@{config.host}:{config.port}/"
+            f"postgresql://{config.user}:{quote_plus(pwd)}@{config.host}:{config.port}/"
             f"{config.database}"
         )
         self.table_name = config.embeddings_table
