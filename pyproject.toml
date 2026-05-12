@@ -20,10 +20,12 @@ python-mcp-server = "python_mcp_server.__main__:main"
 [tool.uv]
 package = true
 constraint-dependencies = [
-    "cryptography>=46.0.7",   # CVE-2026-39892
-    "pygments>=2.20.0",       # CVE-2026-4539
-    "requests>=2.33.0",       # CVE-2026-25645
-    "aiohttp>=3.13.4",        # 10 CVEs in 3.13.3
+    "cryptography>=46.0.7",     # CVE-2026-39892
+    "pygments>=2.20.0",         # CVE-2026-4539
+    "requests>=2.33.0",         # CVE-2026-25645
+    "aiohttp>=3.13.4",          # 10 CVEs in 3.13.3
+    "python-multipart>=0.0.27", # CVE-2026-42561
+    "urllib3>=2.7.0",           # CVE-2026-44431, CVE-2026-44432
 ]
 
 [dependency-groups]
@@ -38,7 +40,7 @@ dev = [
     "pip-audit>=2.6.1",
     "pytest-cov>=6.0.0",
     "deptry>=0.23.0",
-    "pip>=25.1.1",
+    "pip>=26.1",  # CVE-2026-6357
     "ty>=0.0.18",
     "types-pyyaml>=6.0",
 ]

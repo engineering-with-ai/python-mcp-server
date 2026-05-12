@@ -6,13 +6,13 @@ from typing import Final, Optional
 from urllib.parse import quote_plus
 
 import asyncpg
-
-log = logging.getLogger(__name__)
 from pgvector.asyncpg import register_vector
 
 from ..config import PostgresConfig
 from ..models import Document, DocumentMetadata
 from .embedder import Embedder
+
+log = logging.getLogger(__name__)
 
 RRF_K: Final[int] = 60
 
@@ -67,7 +67,9 @@ class RAGClient:
         IDs) come through the BM25 leg that pure cosine would miss.
         """
         query_embedding = await self.embedder.embed(query)
-        log.debug("Connecting to postgres for hybrid search (table=%s)", self.table_name)
+        log.debug(
+            "Connecting to postgres for hybrid search (table=%s)", self.table_name
+        )
         try:
             conn = await asyncpg.connect(self.db_url)
         except Exception:

@@ -40,5 +40,7 @@ class Embedder:
             )
             return response.data[0].embedding
         except Exception:
-            log.exception("OpenAI embed failed (model=%s, input_len=%d)", self.model, len(text))
+            log.exception(
+                "OpenAI embed failed (model=%s, input_len=%d)", self.model, len(text)
+            )
             raise

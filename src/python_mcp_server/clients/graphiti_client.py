@@ -4,12 +4,12 @@ import logging
 import os
 from typing import Optional
 
-log = logging.getLogger(__name__)
-
 from graphiti_core import Graphiti
 
 from ..config import Neo4jConfig
 from ..models import SearchResult, EntityMetadata
+
+log = logging.getLogger(__name__)
 
 
 class GraphitiClient:
