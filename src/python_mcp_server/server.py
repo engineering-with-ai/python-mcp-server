@@ -11,25 +11,23 @@ from .models import SearchResults, Document, FactEvidence, CombinedResults
 
 def create_server(  # type: ignore[explicit-any]
     config: Optional[Config] = None,
-    neo4j_password: Optional[str] = None,
-    postgres_password: Optional[str] = None,
     openai_api_key: Optional[str] = None,
 ) -> FastMCP:
     """Create and configure the MCP server.
 
     Args:
         config: Optional configuration object. Loads from cfg.yml if not given.
-        neo4j_password: Optional Neo4j password. Falls back to NEO4J_PASSWORD env.
-        postgres_password: Optional Postgres password. Falls back to POSTGRES_PASSWORD env.
         openai_api_key: Optional OpenAI key. Falls back to OPENAI_API_KEY env.
 
     Returns:
         Configured FastMCP server instance.
+
+    Backends are selected at request time:
+      - GraphitiClient.from_env() — GRAPH_URL or NEPTUNE_HOST + AOSS_HOST
+      - RAGClient.from_env(embedder, table_name) — VECTOR_URL
     """
     server_config = config or load_config()
-    embedder = Embedder(
-        model=server_config.postgres.embedding_model, api_key=openai_api_key
-    )
+    embedder = Embedder(model=server_config.embedding_model, api_key=openai_api_key)
 
     mcp = FastMCP("Knowledge Graph MCP Server")
 
@@ -40,7 +38,7 @@ def create_server(  # type: ignore[explicit-any]
         USE WHEN: You need verified facts, entities, relationships, or structured
         knowledge. Combines semantic search, BM25, and graph traversal.
         """
-        client = GraphitiClient(server_config.neo4j, password=neo4j_password)
+        client = GraphitiClient.from_env()
         try:
             results = await client.search(query, limit=limit)
             return SearchResults(items=results, total=len(results))
@@ -54,8 +52,8 @@ def create_server(  # type: ignore[explicit-any]
         USE WHEN: You need detailed context, explanations, or source documents.
         The query string is embedded internally; no pre-computed vector needed.
         """
-        client = RAGClient(
-            server_config.postgres, embedder=embedder, password=postgres_password
+        client = RAGClient.from_env(
+            embedder=embedder, table_name=server_config.embeddings_table
         )
         return await client.search(query, limit)
 
@@ -67,7 +65,7 @@ def create_server(  # type: ignore[explicit-any]
         facts; the caller judges whether they support or contradict the statement.
         No boolean verdict — entailment is the caller's job.
         """
-        client = GraphitiClient(server_config.neo4j, password=neo4j_password)
+        client = GraphitiClient.from_env()
         try:
             evidence = await client.search(statement, limit=limit)
             return FactEvidence(statement=statement, evidence=evidence)
@@ -80,9 +78,9 @@ def create_server(  # type: ignore[explicit-any]
 
         USE WHEN: You need both structured facts and supporting context.
         """
-        graph_client = GraphitiClient(server_config.neo4j, password=neo4j_password)
-        rag_client = RAGClient(
-            server_config.postgres, embedder=embedder, password=postgres_password
+        graph_client = GraphitiClient.from_env()
+        rag_client = RAGClient.from_env(
+            embedder=embedder, table_name=server_config.embeddings_table
         )
         try:
             graph_results = await graph_client.search(query, limit=limit)

@@ -17,31 +17,17 @@ class LogLevel(enum.StrEnum):
     DEBUG = "DEBUG"
 
 
-class Neo4jConfig(BaseModel):
-    """Neo4j database configuration settings."""
-
-    uri: str
-    user: str
-    database: str
-
-
-class PostgresConfig(BaseModel):
-    """PostgreSQL database configuration settings."""
-
-    host: str
-    port: int
-    database: str
-    user: str
-    embeddings_table: str
-    embedding_model: str
-
-
 class Config(BaseModel):
-    """Application configuration settings."""
+    """Application configuration settings.
+
+    Connection URLs are NOT held here — read from process env at consume
+    time (GRAPH_URL / NEPTUNE_HOST / AOSS_HOST / VECTOR_URL). cfg.yml
+    stays for non-secret, non-deployment-varying knobs.
+    """
 
     log_level: LogLevel
-    neo4j: Neo4jConfig
-    postgres: PostgresConfig
+    embeddings_table: str
+    embedding_model: str
 
 
 class _ConfigMap(BaseModel):

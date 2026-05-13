@@ -1,27 +1,9 @@
 local:
   log_level: DEBUG
-  neo4j:
-    uri: bolt://localhost:7687
-    user: neo4j
-    database: neo4j
-  postgres:
-    host: localhost
-    port: 5432
-    database: postgres
-    user: postgres
-    embeddings_table: knowledge
-    embedding_model: text-embedding-3-small
+  embeddings_table: knowledge
+  embedding_model: text-embedding-3-small
 
 beta:
   log_level: INFO
-  neo4j:
-    uri: neo4j://173.211.12.43:7687
-    user: neo4j
-    database: neo4j
-  postgres:
-    host: 173.211.12.43
-    port: 5432
-    database: postgres
-    user: postgres
-    embeddings_table: knowledge
-    embedding_model: text-embedding-3-small
+  embeddings_table: knowledge
+  embedding_model: text-embedding-3-small

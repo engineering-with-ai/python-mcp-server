@@ -6,7 +6,7 @@ requires-python = "==3.13.2"
 dependencies = [
     "pydantic>=2.9.2",
     "mcp[cli]>=1.0.0",
-    "graphiti-core>=0.3.0",
+    "graphiti-core[neptune]>=0.3.0",
     "asyncpg>=0.29.0",
     "pgvector>=0.3.0",
     "pyyaml>=6.0.0",
@@ -43,6 +43,7 @@ dev = [
     "pip>=26.1",  # CVE-2026-6357
     "ty>=0.0.18",
     "types-pyyaml>=6.0",
+    "testcontainers[neo4j,postgres]>=4.14.2",
 ]
 
 [tool.poe.tasks]

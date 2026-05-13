@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from ..config import PostgresConfig
 from .embedder import Embedder
 from .rag_client import RAGClient, rrf_fuse
 
@@ -37,32 +36,23 @@ def _row(doc_id: str, content: str = "") -> dict[str, object]:
 @pytest.mark.asyncio
 async def test_rag_client_search_fuses_cosine_and_bm25_rankings() -> None:
     """search() issues both cosine and BM25 queries and fuses via RRF."""
-    # Arrange
-    test_config = PostgresConfig(
-        host="localhost",
-        port=5432,
-        database="test",
-        user="test",
-        embeddings_table="energy_embeddings",
-        embedding_model="text-embedding-3-small",
-    )
-    # cosine returns [doc1, doc2]; bm25 returns [doc1, doc3]
+    # Arrange — cosine returns [doc1, doc2]; bm25 returns [doc1, doc3]
     cosine_rows = [_row("doc1"), _row("doc2")]
     bm25_rows = [_row("doc1"), _row("doc3")]
-    with (
-        patch(
-            "src.python_mcp_server.clients.rag_client.asyncpg.connect"
-        ) as mock_connect,
-        patch("src.python_mcp_server.clients.rag_client.os.getenv") as mock_getenv,
-    ):
-        mock_getenv.return_value = "test_pw"
+    with patch(
+        "src.python_mcp_server.clients.rag_client.asyncpg.connect"
+    ) as mock_connect:
         mock_conn = AsyncMock()
         mock_connect.return_value = mock_conn
         mock_conn.fetch.side_effect = [cosine_rows, bm25_rows]
 
         embedder = AsyncMock(spec=Embedder)
         embedder.embed.return_value = [0.1] * 1536
-        client = RAGClient(test_config, embedder=embedder)
+        client = RAGClient(
+            db_url="postgresql://test:test_pw@localhost:5432/test",
+            embedder=embedder,
+            table_name="energy_embeddings",
+        )
 
         # Act
         results = await client.search("test query")

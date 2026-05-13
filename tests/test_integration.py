@@ -8,7 +8,7 @@ import pytest
 from src.python_mcp_server.clients.embedder import Embedder
 from src.python_mcp_server.clients.graphiti_client import GraphitiClient
 from src.python_mcp_server.clients.rag_client import RAGClient
-from src.python_mcp_server.config import Config, Neo4jConfig, PostgresConfig, LogLevel
+from src.python_mcp_server.config import Config, LogLevel
 from src.python_mcp_server.server import create_server
 
 
@@ -19,42 +19,28 @@ class TestGraphitiClient:
     async def test_graphiti_client_search_returns_results(self) -> None:
         """Test that Graphiti client can perform search."""
         # Arrange
-        test_config = Neo4jConfig(
-            uri="bolt://localhost:7687", user="neo4j", database="neo4j"
+        mock_graphiti = AsyncMock()
+        mock_result = SimpleNamespace(
+            uuid="test",
+            id="test",
+            fact="test result",
+            content="test result",
+            score=0.9,
         )
-        with (
-            patch(
-                "src.python_mcp_server.clients.graphiti_client.Graphiti"
-            ) as mock_graphiti_class,
-            patch(
-                "src.python_mcp_server.clients.graphiti_client.os.getenv"
-            ) as mock_getenv,
-        ):
-            mock_getenv.return_value = "test_password"
-            mock_graphiti = AsyncMock()
-            mock_graphiti_class.return_value = mock_graphiti
-            mock_result = SimpleNamespace(
-                uuid="test",
-                id="test",
-                fact="test result",
-                content="test result",
-                score=0.9,
-            )
+        mock_graphiti.search.return_value = [mock_result]
 
-            mock_graphiti.search.return_value = [mock_result]
+        client = GraphitiClient(mock_graphiti)
 
-            client = GraphitiClient(test_config)
+        # Act
+        results = await client.search("test query")
 
-            # Act
-            results = await client.search("test query")
-
-            # Assert
-            assert len(results) == 1
-            assert results[0].id == "test"
-            assert results[0].content == "test result"
-            mock_graphiti.search.assert_called_once_with(
-                query="test query", center_node_uuid=None
-            )
+        # Assert
+        assert len(results) == 1
+        assert results[0].id == "test"
+        assert results[0].content == "test result"
+        mock_graphiti.search.assert_called_once_with(
+            query="test query", center_node_uuid=None
+        )
 
 
 class TestRAGClient:
@@ -64,21 +50,9 @@ class TestRAGClient:
     async def test_rag_client_vector_search_returns_results(self) -> None:
         """Test that RAG client can perform vector search."""
         # Arrange
-        test_config = PostgresConfig(
-            host="localhost",
-            port=5432,
-            database="test",
-            user="test",
-            embeddings_table="energy_embeddings",
-            embedding_model="text-embedding-3-small",
-        )
-        with (
-            patch(
-                "src.python_mcp_server.clients.rag_client.asyncpg.connect"
-            ) as mock_connect,
-            patch("src.python_mcp_server.clients.rag_client.os.getenv") as mock_getenv,
-        ):
-            mock_getenv.return_value = "postgresql://test:test@localhost:5432/test"
+        with patch(
+            "src.python_mcp_server.clients.rag_client.asyncpg.connect"
+        ) as mock_connect:
             mock_conn = AsyncMock()
             mock_connect.return_value = mock_conn
             mock_conn.fetch.return_value = [
@@ -91,7 +65,11 @@ class TestRAGClient:
             ]
 
             embedder = AsyncMock(spec=Embedder)
-            client = RAGClient(test_config, embedder=embedder)
+            client = RAGClient(
+                db_url="postgresql://test:test@localhost:5432/test",
+                embedder=embedder,
+                table_name="energy_embeddings",
+            )
             query_embedding = [0.1, 0.2, 0.3]
 
             # Act
@@ -107,21 +85,9 @@ class TestRAGClient:
     async def test_rag_client_queries_energy_embeddings_table(self) -> None:
         """Test that RAG client queries energy_embeddings table with proper schema."""
         # Arrange
-        test_config = PostgresConfig(
-            host="localhost",
-            port=5432,
-            database="test",
-            user="test",
-            embeddings_table="energy_embeddings",
-            embedding_model="text-embedding-3-small",
-        )
-        with (
-            patch(
-                "src.python_mcp_server.clients.rag_client.asyncpg.connect"
-            ) as mock_connect,
-            patch("src.python_mcp_server.clients.rag_client.os.getenv") as mock_getenv,
-        ):
-            mock_getenv.return_value = "postgresql://test:test@localhost:5432/test"
+        with patch(
+            "src.python_mcp_server.clients.rag_client.asyncpg.connect"
+        ) as mock_connect:
             mock_conn = AsyncMock()
             mock_connect.return_value = mock_conn
             mock_conn.fetch.return_value = [
@@ -137,7 +103,11 @@ class TestRAGClient:
             ]
 
             embedder = AsyncMock(spec=Embedder)
-            client = RAGClient(test_config, embedder=embedder)
+            client = RAGClient(
+                db_url="postgresql://test:test@localhost:5432/test",
+                embedder=embedder,
+                table_name="energy_embeddings",
+            )
             query_embedding = [0.1] * 1536
 
             # Act
@@ -198,14 +168,13 @@ class TestMCPServer:
         """Test that search_knowledge tool can be called and returns correct format."""
         # Arrange
         with (
+            patch.dict(
+                "os.environ", {"GRAPH_URL": "neo4j+s://u:p@host:7687"}, clear=False
+            ),
             patch(
                 "src.python_mcp_server.clients.graphiti_client.Graphiti"
             ) as mock_graphiti_class,
-            patch(
-                "src.python_mcp_server.clients.graphiti_client.os.getenv"
-            ) as mock_getenv,
         ):
-            mock_getenv.return_value = "test_password"
             mock_graphiti = AsyncMock()
             mock_graphiti_class.return_value = mock_graphiti
             mock_result = SimpleNamespace(
@@ -278,25 +247,12 @@ class TestMCPServer:
         # Arrange
         test_config = Config(
             log_level=LogLevel.INFO,
-            neo4j=Neo4jConfig(
-                uri="bolt://test:7687", user="test_user", database="test_db"
-            ),
-            postgres=PostgresConfig(
-                host="localhost",
-                port=5432,
-                database="test",
-                user="test",
-                embeddings_table="test_table",
-                embedding_model="text-embedding-3-small",
-            ),
+            embeddings_table="test_table",
+            embedding_model="text-embedding-3-small",
         )
 
         # Act
-        server = create_server(
-            config=test_config,
-            neo4j_password="test_password",  # noqa: S106
-            postgres_password="test_pw",  # noqa: S106,
-        )
+        server = create_server(config=test_config)
 
         # Assert
         assert server is not None
@@ -308,20 +264,14 @@ class TestMCPServer:
         # Arrange
         test_config = Config(
             log_level=LogLevel.INFO,
-            neo4j=Neo4jConfig(
-                uri="bolt://test:7687", user="test_user", database="test_db"
-            ),
-            postgres=PostgresConfig(
-                host="localhost",
-                port=5432,
-                database="test",
-                user="test",
-                embeddings_table="test_table",
-                embedding_model="text-embedding-3-small",
-            ),
+            embeddings_table="test_table",
+            embedding_model="text-embedding-3-small",
         )
 
         with (
+            patch.dict(
+                "os.environ", {"GRAPH_URL": "neo4j+s://u:p@host:7687"}, clear=False
+            ),
             patch(
                 "src.python_mcp_server.clients.graphiti_client.Graphiti"
             ) as mock_graphiti_class,
@@ -339,11 +289,7 @@ class TestMCPServer:
             mock_graphiti.search.return_value = [mock_result]
 
             # Act
-            server = create_server(
-                config=test_config,
-                neo4j_password="test_password",  # noqa: S106
-                postgres_password="test_pw",  # noqa: S106,
-            )
+            server = create_server(config=test_config)
             _content, result_data = await server.call_tool(
                 "search_knowledge", {"query": "test query", "limit": 5}
             )

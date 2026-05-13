@@ -2,13 +2,11 @@
 
 import logging
 import os
-from typing import Final, Optional
-from urllib.parse import quote_plus
+from typing import Final
 
 import asyncpg
 from pgvector.asyncpg import register_vector
 
-from ..config import PostgresConfig
 from ..models import Document, DocumentMetadata
 from .embedder import Embedder
 
@@ -37,26 +35,30 @@ def rrf_fuse(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float
 class RAGClient:
     """Client for RAG vector similarity search."""
 
-    def __init__(
-        self,
-        config: PostgresConfig,
-        embedder: Embedder,
-        password: Optional[str] = None,
-    ) -> None:
-        """Initialize RAG client.
+    def __init__(self, db_url: str, embedder: Embedder, table_name: str) -> None:
+        """Wrap a Postgres URL + embedder for hybrid search against a vector table.
+
+        Prefer RAGClient.from_env() — direct construction is for tests.
 
         Args:
-            config: PostgreSQL configuration (host, port, db, user, table, model)
+            db_url: Full postgres connection URL (creds embedded)
             embedder: Injected embedder for query string → vector
-            password: Optional password. Falls back to POSTGRES_PASSWORD env var.
+            table_name: Embeddings table name to query
         """
-        pwd = password or os.getenv("POSTGRES_PASSWORD", "")
-        self.db_url = (
-            f"postgresql://{config.user}:{quote_plus(pwd)}@{config.host}:{config.port}/"
-            f"{config.database}"
-        )
-        self.table_name = config.embeddings_table
+        self.db_url = db_url
+        self.table_name = table_name
         self.embedder = embedder
+
+    @classmethod
+    def from_env(cls, embedder: Embedder, table_name: str) -> "RAGClient":
+        """Read VECTOR_URL from process env, return a configured client.
+
+        VECTOR_URL is set by docker-compose env_file: secrets.env (compose
+        writes it from AWS Secrets Manager at boot via UserData).
+        """
+        return cls(
+            db_url=os.environ["VECTOR_URL"], embedder=embedder, table_name=table_name
+        )
 
     async def search(self, query: str, limit: int = 10) -> list[Document]:
         """Hybrid retrieval: cosine + BM25 fused via Reciprocal Rank Fusion.
