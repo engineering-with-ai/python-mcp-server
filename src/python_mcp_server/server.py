@@ -4,30 +4,23 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from .clients import Embedder, GraphitiClient, RAGClient
+from .clients import GraphitiClient, RAGClient, make_embedder
 from .config import Config, load_config
 from .models import SearchResults, Document, FactEvidence, CombinedResults
 
 
-def create_server(  # type: ignore[explicit-any]
-    config: Optional[Config] = None,
-    openai_api_key: Optional[str] = None,
-) -> FastMCP:
+def create_server(config: Optional[Config] = None) -> FastMCP:
     """Create and configure the MCP server.
 
-    Args:
-        config: Optional configuration object. Loads from cfg.yml if not given.
-        openai_api_key: Optional OpenAI key. Falls back to OPENAI_API_KEY env.
+    Embedder provider is decided by the resolved customer block's
+    llm_provider discriminator (Bedrock vs Ollama).
 
-    Returns:
-        Configured FastMCP server instance.
-
-    Backends are selected at request time:
+    Backends at request time:
       - GraphitiClient.from_env() — GRAPH_URL or NEPTUNE_HOST + AOSS_HOST
-      - RAGClient.from_env(embedder, table_name) — VECTOR_URL
+      - RAGClient.from_env(embedder) — VECTOR_URL
     """
     server_config = config or load_config()
-    embedder = Embedder(model=server_config.embedding_model, api_key=openai_api_key)
+    embedder = make_embedder(server_config.settings)
 
     mcp = FastMCP("Knowledge Graph MCP Server")
 
@@ -52,9 +45,7 @@ def create_server(  # type: ignore[explicit-any]
         USE WHEN: You need detailed context, explanations, or source documents.
         The query string is embedded internally; no pre-computed vector needed.
         """
-        client = RAGClient.from_env(
-            embedder=embedder, table_name=server_config.embeddings_table
-        )
+        client = RAGClient.from_env(embedder=embedder)
         return await client.search(query, limit)
 
     @mcp.tool()
@@ -79,9 +70,7 @@ def create_server(  # type: ignore[explicit-any]
         USE WHEN: You need both structured facts and supporting context.
         """
         graph_client = GraphitiClient.from_env()
-        rag_client = RAGClient.from_env(
-            embedder=embedder, table_name=server_config.embeddings_table
-        )
+        rag_client = RAGClient.from_env(embedder=embedder)
         try:
             graph_results = await graph_client.search(query, limit=limit)
             vector_results = await rag_client.search(query, limit)

@@ -14,6 +14,10 @@ log = logging.getLogger(__name__)
 
 RRF_K: Final[int] = 60
 
+# arcnode/seed pipeline always writes to `knowledge` (see seed_vector.py).
+# Hardcoded — there's no second table and no plan for one.
+KNOWLEDGE_TABLE: Final[str] = "knowledge"
+
 
 def rrf_fuse(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float]]:
     """Reciprocal Rank Fusion over multiple rankings.
@@ -35,30 +39,29 @@ def rrf_fuse(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float
 class RAGClient:
     """Client for RAG vector similarity search."""
 
-    def __init__(self, db_url: str, embedder: Embedder, table_name: str) -> None:
-        """Wrap a Postgres URL + embedder for hybrid search against a vector table.
+    def __init__(
+        self,
+        db_url: str,
+        embedder: Embedder,
+        table_name: str = KNOWLEDGE_TABLE,
+    ) -> None:
+        """Wrap a Postgres URL + embedder for hybrid search.
 
         Prefer RAGClient.from_env() — direct construction is for tests.
-
-        Args:
-            db_url: Full postgres connection URL (creds embedded)
-            embedder: Injected embedder for query string → vector
-            table_name: Embeddings table name to query
+        table_name only varies in tests; prod always hits `knowledge`.
         """
         self.db_url = db_url
         self.table_name = table_name
         self.embedder = embedder
 
     @classmethod
-    def from_env(cls, embedder: Embedder, table_name: str) -> "RAGClient":
+    def from_env(cls, embedder: Embedder) -> "RAGClient":
         """Read VECTOR_URL from process env, return a configured client.
 
         VECTOR_URL is set by docker-compose env_file: secrets.env (compose
         writes it from AWS Secrets Manager at boot via UserData).
         """
-        return cls(
-            db_url=os.environ["VECTOR_URL"], embedder=embedder, table_name=table_name
-        )
+        return cls(db_url=os.environ["VECTOR_URL"], embedder=embedder)
 
     async def search(self, query: str, limit: int = 10) -> list[Document]:
         """Hybrid retrieval: cosine + BM25 fused via Reciprocal Rank Fusion.

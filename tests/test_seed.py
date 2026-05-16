@@ -31,6 +31,10 @@ from src.python_mcp_server.seed import (
     seed_graph_neo4j,
     seed_vector,
 )
+from tests.fixtures.containers import (  # noqa: F401  pytest fixtures
+    neo4j,
+    postgres_pgvector,
+)
 
 CYPHER_SCRIPT = """
 CREATE (a:Foo {name: 'bar'});

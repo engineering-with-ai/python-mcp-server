@@ -11,8 +11,8 @@ async def _run() -> None:
     config = load_config()
     setup_logger(config)
     await seed_all(
-        vector_url=config.vector_seed_url,
-        graph_neo4j_url=config.graph_neo4j_seed_url,
+        vector_url=config.settings.vector_seed_url,
+        graph_neo4j_url=config.settings.graph_neo4j_seed_url,
     )
     server = create_server(config)
     await server.run_stdio_async()

@@ -55,3 +55,9 @@ ignore = [
 [lint.pylint]
 max-args = 5
 max-statements = 30
+
+# Pytest fixtures imported into test modules trip F811 (the function
+# parameter shadows the imported symbol pytest needs to resolve them).
+# Explicit imports + this allowance > magic conftest re-exports.
+[lint.per-file-ignores]
+"tests/*" = ["F811"]

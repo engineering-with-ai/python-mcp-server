@@ -8,8 +8,21 @@ import pytest
 from src.python_mcp_server.clients.embedder import Embedder
 from src.python_mcp_server.clients.graphiti_client import GraphitiClient
 from src.python_mcp_server.clients.rag_client import RAGClient
-from src.python_mcp_server.config import Config, LogLevel
+from src.python_mcp_server.config import Config, LogLevel, OllamaSettings
 from src.python_mcp_server.server import create_server
+
+
+def _test_config() -> Config:
+    """Construct a Config with Ollama settings — no AWS creds needed."""
+    return Config(
+        log_level=LogLevel.INFO,
+        settings=OllamaSettings(
+            llm_provider="ollama",
+            ollama_base_url="http://localhost:11434/v1",
+            ollama_chat_model="qwen3.6:35b",
+            ollama_embedding_model="qwen3-embedding:4b",
+        ),
+    )
 
 
 class TestGraphitiClient:
@@ -245,11 +258,7 @@ class TestMCPServer:
     def test_create_server_with_explicit_config(self) -> None:
         """Test that create_server accepts explicit config parameters."""
         # Arrange
-        test_config = Config(
-            log_level=LogLevel.INFO,
-            embeddings_table="test_table",
-            embedding_model="text-embedding-3-small",
-        )
+        test_config = _test_config()
 
         # Act
         server = create_server(config=test_config)
@@ -262,11 +271,7 @@ class TestMCPServer:
     async def test_create_server_with_explicit_config_can_call_tools(self) -> None:
         """Test that server created with explicit config can execute tools."""
         # Arrange
-        test_config = Config(
-            log_level=LogLevel.INFO,
-            embeddings_table="test_table",
-            embedding_model="text-embedding-3-small",
-        )
+        test_config = _test_config()
 
         with (
             patch.dict(

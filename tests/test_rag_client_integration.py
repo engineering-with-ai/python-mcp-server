@@ -15,6 +15,7 @@ from testcontainers.postgres import PostgresContainer
 
 from src.python_mcp_server.clients.embedder import Embedder
 from src.python_mcp_server.clients.rag_client import RAGClient
+from tests.fixtures.containers import postgres_pgvector  # noqa: F401  pytest fixture
 from urllib.parse import quote_plus
 
 # Reason: 4 dims keeps the test readable; mocked embedder returns matching shape

@@ -20,6 +20,7 @@ from graphiti_core.llm_client import LLMClient
 from testcontainers.neo4j import Neo4jContainer
 
 from src.python_mcp_server.clients.graphiti_client import GraphitiClient
+from tests.fixtures.containers import neo4j  # noqa: F401  pytest fixture
 
 EMBED_DIM = 1024
 

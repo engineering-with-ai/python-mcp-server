@@ -1,16 +1,40 @@
 local:
   log_level: DEBUG
-  embeddings_table: knowledge
-  embedding_model: text-embedding-3-small
-  # Seed slices null in local — assume devs point at pre-populated DBs
-  # (testcontainers fixtures or a personal scratch instance). Set the
-  # URLs below to exercise the boot-seed path locally.
-  vector_seed_url: null
-  graph_neo4j_seed_url: null
+  # e2e off by default — pook covers the contract. Flip true to dogfood
+  # real Ollama at 173.211.12.43:11434 (free; off in CI to keep runs fast).
+  e2e: false
+  customers:
+    # Local dev points all three tiers at arcnode's beta Ollama for
+    # dogfooding the airgapped models. Real prod (beta block) uses
+    # the actual per-tier provider.
+    defense:
+      llm_provider: ollama
+      ollama_base_url: http://173.211.12.43:11434/v1
+      ollama_chat_model: qwen3.6:35b
+      ollama_embedding_model: qwen3-embedding:4b
+    commercial:
+      llm_provider: ollama
+      ollama_base_url: http://173.211.12.43:11434/v1
+      ollama_chat_model: qwen3.6:35b
+      ollama_embedding_model: qwen3-embedding:4b
+    airgapped:
+      llm_provider: ollama
+      ollama_base_url: http://173.211.12.43:11434/v1
+      ollama_chat_model: qwen3.6:35b
+      ollama_embedding_model: qwen3-embedding:4b
 
 beta:
   log_level: INFO
-  embeddings_table: knowledge
-  embedding_model: text-embedding-3-small
-  vector_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/vector.sql.gz
-  graph_neo4j_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/graph-neo4j.cypher.gz
+  customers:
+    defense:
+      llm_provider: bedrock
+      bedrock_chat_model_id: us.anthropic.claude-sonnet-4-6
+      bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
+      vector_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/vector-cloud.sql.gz
+      graph_neo4j_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/graph-neo4j.cypher.gz
+    commercial:
+      llm_provider: bedrock
+      bedrock_chat_model_id: us.anthropic.claude-sonnet-4-6
+      bedrock_embedding_model_id: amazon.titan-embed-text-v2:0
+      vector_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/vector-cloud.sql.gz
+      graph_neo4j_seed_url: https://arcnode-public.s3.us-east-1.amazonaws.com/seed/graph-neo4j.cypher.gz
