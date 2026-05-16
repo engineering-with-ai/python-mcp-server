@@ -8,7 +8,12 @@ from urllib.parse import urlsplit, urlunsplit
 from graphiti_core import Graphiti
 from graphiti_core.driver.neptune_driver import NeptuneDriver
 
-from ..models import SearchResult, EntityMetadata
+from ..models import EntityMetadata, SearchResult
+from .graphiti_bedrock import (
+    BedrockCrossEncoderClient,
+    BedrockEmbedderClient,
+    BedrockLLMClient,
+)
 
 log = logging.getLogger(__name__)
 
@@ -41,11 +46,22 @@ class GraphitiClient:
         neptune_host = os.environ.get("NEPTUNE_HOST")
         aoss_host = os.environ.get("AOSS_HOST")
         if neptune_host and aoss_host:
-            driver = NeptuneDriver(
-                host=f"neptune-db://{neptune_host}",
-                aoss_host=aoss_host,
+            # Defense (Bedrock cloud) — wire graphiti's three clients to
+            # Bedrock so search_knowledge / verify_fact don't reach for
+            # OPENAI_API_KEY (which we scrubbed per ADR-024). See
+            # graphiti_bedrock module + #64.
+            llm = BedrockLLMClient()
+            return cls(
+                Graphiti(
+                    graph_driver=NeptuneDriver(
+                        host=f"neptune-db://{neptune_host}",
+                        aoss_host=aoss_host,
+                    ),
+                    embedder=BedrockEmbedderClient(),
+                    llm_client=llm,
+                    cross_encoder=BedrockCrossEncoderClient(llm=llm),
+                )
             )
-            return cls(Graphiti(graph_driver=driver))
 
         raise RuntimeError(
             "no graph backend configured — set GRAPH_URL (commercial/ISO) "
