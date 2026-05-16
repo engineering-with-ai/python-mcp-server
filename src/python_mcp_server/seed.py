@@ -44,7 +44,12 @@ GRAPH_MARKER_SLICE = "graph"
 
 # Neptune Bulk Loader payload constants — see
 # https://docs.aws.amazon.com/neptune/latest/userguide/bulk-load.html
-NEPTUNE_S3_SOURCE = "s3://arcnode-public/seed/graph-neptune/"
+# graph-neptune-v2/ has edges.csv stripped of multi-valued []-typed columns
+# (Neptune doesn't allow multi-valued props on edges, even though Graphiti's
+# default CSV export emits them). Vertices.csv is unchanged from the
+# original — vertex multi-vals are fine. Original kept at graph-neptune/
+# for Aura/self-hosted Neo4j paths that don't have this constraint.
+NEPTUNE_S3_SOURCE = "s3://arcnode-public/seed/graph-neptune-v2/"
 NEPTUNE_LOAD_POLL_INTERVAL_SEC = 10
 NEPTUNE_LOAD_MAX_WAIT_SEC = 1800  # 30 min — bulk load of ~400MB is < 5 min typical
 # Terminal load states; everything else is in-progress.
