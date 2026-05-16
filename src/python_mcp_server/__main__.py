@@ -35,10 +35,16 @@ async def _run() -> None:
     config = load_config()
     setup_logger(config)
     # Kick seed off as a background task so MCP stdio becomes responsive
-    # immediately. See _seed_in_background for the why.
-    asyncio.create_task(_seed_in_background(config))
+    # immediately. See _seed_in_background for the why. Reference is held
+    # on the function-local `_seed_task` to keep it from being GC'd —
+    # asyncio uses weakrefs internally for task tracking.
+    _seed_task = asyncio.create_task(_seed_in_background(config))
     server = create_server(config)
-    await server.run_stdio_async()
+    try:
+        await server.run_stdio_async()
+    finally:
+        # Server exited (stdin closed); cancel seed if it's still running.
+        _seed_task.cancel()
 
 
 def main() -> None:
