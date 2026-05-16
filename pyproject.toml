@@ -47,6 +47,12 @@ dev = [
     "testcontainers[neo4j,postgres]>=4.14.2",
 ]
 
+[tool.setuptools.package-data]
+# Bundle cfg.yml in the wheel so config.load_config can find it when
+# this package is consumed as a git dep from another project's venv
+# (the repo root isn't accessible there).
+python_mcp_server = ["cfg.yml"]
+
 [tool.poe.tasks]
 depcheck = "deptry . --per-rule-ignores DEP004=pytest,DEP002=asyncpg|starlette"
 format = "black ."

@@ -50,7 +50,10 @@ def load_config() -> Config:
         FileNotFoundError: If cfg.yml is missing.
         yaml.YAMLError: If cfg.yml contains invalid YAML.
     """
-    cfg_path = Path(__file__).parent.parent.parent / "cfg.yml"
+    # cfg.yml ships inside the package so it survives pip install — no
+    # repo-root assumption that breaks when this package is consumed as
+    # a git dep from another project's venv.
+    cfg_path = Path(__file__).parent / "cfg.yml"
     with open(cfg_path) as file:
         config_map = _ConfigMap(**yaml.safe_load(file))
         environment = os.environ.get("ENV", "local")
