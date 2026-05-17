@@ -304,12 +304,24 @@ def _stream_csv_projection(
 
     Streaming avoids materializing the full 113MB vertices.csv (most of
     which is the name_embedding column we don't need for AOSS).
+
+    Neptune CSV headers are `name:Type` (e.g. `uuid:String`,
+    `created_at:DateTime`). Strip the type suffix so callers can ask
+    for bare `uuid` and get the matched column.
     """
     with urllib.request.urlopen(url) as resp:  # nosec B310  # noqa: S310
         text = io.TextIOWrapper(resp, encoding="utf-8")
         reader = csv.DictReader(text)
+        if reader.fieldnames is None:
+            return
+        header_map = {h.split(":", 1)[0]: h for h in reader.fieldnames}
         for row in reader:
-            yield {f: row[f] for f in fields if row.get(f)}
+            out: dict[str, str] = {}
+            for f in fields:
+                src = header_map.get(f)
+                if src and row.get(src):
+                    out[f] = row[src]
+            yield out
 
 
 async def _populate_aoss_indexes() -> None:
