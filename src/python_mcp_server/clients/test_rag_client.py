@@ -5,7 +5,36 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from .embedder import Embedder
-from .rag_client import RAGClient, rrf_fuse
+from .rag_client import RAGClient, _connect, rrf_fuse
+
+
+@pytest.mark.asyncio
+async def test_connect_unquotes_password_and_uses_kwargs() -> None:
+    """_connect() parses an encoded URL and passes kwargs (no raw URL).
+
+    Reason: asyncpg's URL parser splits on the FIRST `@` so a password
+    containing `@` (common in shared dev creds) breaks DNS resolution.
+    Going through kwargs avoids that parser; unquote() returns the real
+    password to asyncpg.
+    """
+    # Arrange — 'REDACTED' encoded ends in %40%21
+    url = "postgres://postgres:REDACTED@host.example:5432/postgres"
+    with patch(
+        "src.python_mcp_server.clients.rag_client.asyncpg.connect"
+    ) as mock_connect:
+        mock_connect.return_value = AsyncMock()
+
+        # Act
+        await _connect(url)
+
+        # Assert — asyncpg gets decoded password via kwargs, no URL
+        mock_connect.assert_called_once_with(
+            host="host.example",
+            port=5432,
+            user="postgres",
+            password="REDACTED",  # noqa: S106  # nosec B106
+            database="postgres",
+        )
 
 
 def test_rrf_fuse_ranks_doc_in_both_rankings_first() -> None:

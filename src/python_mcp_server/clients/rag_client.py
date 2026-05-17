@@ -3,6 +3,7 @@
 import logging
 import os
 from typing import Final
+from urllib.parse import unquote, urlsplit
 
 import asyncpg
 from pgvector.asyncpg import register_vector
@@ -76,7 +77,7 @@ class RAGClient:
             "Connecting to postgres for hybrid search (table=%s)", self.table_name
         )
         try:
-            conn = await asyncpg.connect(self.db_url)
+            conn = await _connect(self.db_url)
         except Exception:
             log.exception("asyncpg connect failed (table=%s)", self.table_name)
             raise
@@ -135,7 +136,7 @@ class RAGClient:
         self, query_embedding: list[float], limit: int = 10
     ) -> list[Document]:
         """Vector similarity search using a pre-computed embedding."""
-        conn = await asyncpg.connect(self.db_url)
+        conn = await _connect(self.db_url)
         try:
             await register_vector(conn)
             # Reason: table_name is from cfg.yml, not user input - safe from injection
@@ -161,6 +162,28 @@ class RAGClient:
             )
             for row in rows
         ]
+
+
+async def _connect(db_url: str) -> "asyncpg.Connection":
+    """asyncpg connect via kwargs so URL-encoded passwords decode correctly.
+
+    Reason: asyncpg's URL parser splits userinfo on the FIRST `@`, so
+    shared dev passwords containing `@` (like `REDACTED`) get
+    mangled — `1@host` is treated as the hostname → DNS failure. urlsplit
+    uses the LAST-@ rule (correct), and unquote() turns the %-encoded
+    forms back into the real characters before they reach asyncpg.
+
+    Raw (unencoded) passwords also work: urlsplit handles them; unquote
+    is a no-op on plain text.
+    """
+    parts = urlsplit(db_url)
+    return await asyncpg.connect(
+        host=parts.hostname,
+        port=parts.port,
+        user=unquote(parts.username) if parts.username else None,
+        password=unquote(parts.password) if parts.password else None,
+        database=parts.path.lstrip("/") if parts.path else None,
+    )
 
 
 def _build_metadata(row: "asyncpg.Record") -> DocumentMetadata:
