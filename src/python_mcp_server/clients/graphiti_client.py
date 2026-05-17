@@ -3,7 +3,7 @@
 import logging
 import os
 from typing import Any, Optional, cast
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 from graphiti_core import Graphiti
 from graphiti_core.driver import record_parsers as _record_parsers
@@ -153,9 +153,17 @@ def _split_neo4j_url(url: str) -> tuple[str, Optional[str], Optional[str]]:
 
     Aura-style packaging puts creds in the URL for env-var convenience;
     neo4j-python won't accept them there, so we strip them out.
+
+    Reason: parts.username/password return the *raw* substring — urlsplit
+    does NOT decode percent-encoding. Callers may URL-encode creds to
+    survive special chars (@, !, etc. — common in shared dev passwords)
+    so we unquote here before handing the cred to the Neo4j driver. Raw
+    (unencoded) creds also work since unquote is a no-op on plain text.
     """
     parts = urlsplit(url)
     host = parts.hostname or ""
     netloc = f"{host}:{parts.port}" if parts.port else host
     clean = urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
-    return clean, parts.username, parts.password
+    user = unquote(parts.username) if parts.username else None
+    password = unquote(parts.password) if parts.password else None
+    return clean, user, password

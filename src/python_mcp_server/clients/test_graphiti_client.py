@@ -49,6 +49,33 @@ class TestFromEnvFactory:
                 uri="bolt://host.example:7687", user=None, password=None
             )
 
+    def test_url_encoded_creds_are_unquoted(self) -> None:
+        """%-encoded creds in GRAPH_URL get decoded before reaching Neo4j.
+
+        Reason: shared dev passwords often contain @ and ! which must be
+        encoded for asyncpg's URL parser; the encoded form must also work
+        for the graph path so one URL works for both consumers.
+        """
+        # Arrange — password 'REDACTED' encoded as %21 and %401
+        env = {
+            "GRAPH_URL": "neo4j://neo4j:REDACTED@host.example:7687"
+        }
+        with (
+            patch.dict("os.environ", env, clear=True),
+            patch(
+                "python_mcp_server.clients.graphiti_client.Graphiti"
+            ) as mock_graphiti_class,
+        ):
+            # Act
+            GraphitiClient.from_env()
+
+            # Assert — Neo4j gets the *decoded* password, not the encoded string
+            mock_graphiti_class.assert_called_once_with(
+                uri="neo4j://host.example:7687",
+                user="neo4j",
+                password="REDACTED",  # noqa: S106  # nosec B106
+            )
+
     def test_neptune_env_constructs_neptune_backed_client(self) -> None:
         """NEPTUNE_HOST + AOSS_HOST → Graphiti with NeptuneDriver + Bedrock clients.
 
