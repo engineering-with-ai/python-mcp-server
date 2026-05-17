@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 import boto3
 import httpx
 
-from ..config import BedrockSettings, CustomerSettings, OllamaSettings
+from ..config import BedrockSettings, ProviderSettings, OllamaSettings
 
 if TYPE_CHECKING:
     # Type stubs only — never imported at runtime, keeps wheel slim
@@ -125,7 +125,7 @@ class OllamaQwen3Embedder(Embedder):
             raise
 
 
-def make_embedder(settings: CustomerSettings) -> Embedder:
+def make_embedder(settings: ProviderSettings) -> Embedder:
     """Construct an Embedder from a customer's resolved settings block.
 
     Dispatch is by type — pydantic's discriminated union has already

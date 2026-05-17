@@ -1,14 +1,9 @@
-"""Per-stage + per-customer configuration loader.
+"""Per-stage configuration loader.
 
-Two axes:
-  - ENV (local | beta)            — stage (where the process runs)
-  - CUSTOMER_ENV (commercial | defense | airgapped) — customer tier
-                                    (drives provider, seed URLs, etc.)
-
-cfg.yml shape: cfg[ENV][customers][CUSTOMER_ENV] -> a discriminated-union
-customer block. Provider settings (Bedrock vs Ollama) are decided by the
-`llm_provider` field on each customer block; pydantic dispatches on that
-discriminator so the wrong field combo can't compile.
+One axis: ENV (local | beta) — picks the cfg.yml stage block. Each stage
+holds a single provider settings block (BedrockSettings | OllamaSettings)
+dispatched by the `llm_provider` discriminator. Pydantic validates the
+right field combo at load time.
 
 Connection URLs (GRAPH_URL / NEPTUNE_HOST / VECTOR_URL) are NOT held
 here — they come from process env at consume time (compose env_file →
@@ -36,7 +31,7 @@ class LogLevel(enum.StrEnum):
 
 
 class BedrockSettings(BaseModel):
-    """Bedrock provider — cloud customers (commercial + defense)."""
+    """Bedrock provider — cloud stages."""
 
     llm_provider: Literal["bedrock"]
     bedrock_chat_model_id: str
@@ -46,7 +41,7 @@ class BedrockSettings(BaseModel):
 
 
 class OllamaSettings(BaseModel):
-    """Ollama provider — airgapped customers + local dev dogfood.
+    """Ollama provider — airgapped + local dev dogfood.
 
     Embedding model is Qwen3 (2560d) truncated to 1024 (Matryoshka) so
     schema matches Bedrock Titan dumps.
@@ -60,19 +55,17 @@ class OllamaSettings(BaseModel):
     graph_neo4j_seed_url: str | None = None
 
 
-CustomerSettings = Annotated[
+ProviderSettings = Annotated[
     BedrockSettings | OllamaSettings, Field(discriminator="llm_provider")
 ]
 
-CustomerEnv = Literal["commercial", "defense", "airgapped"]
-
 
 class StageConfig(BaseModel):
-    """One stage block in cfg.yml. Holds log level + per-customer settings."""
+    """One stage block in cfg.yml."""
 
     log_level: LogLevel
     e2e: bool = False  # tests-only: false → pook mocks HTTP; true → hit real services
-    customers: dict[CustomerEnv, CustomerSettings]
+    settings: ProviderSettings
 
 
 class _ConfigMap(BaseModel):
@@ -80,39 +73,22 @@ class _ConfigMap(BaseModel):
     beta: StageConfig
 
 
-# Public-facing handle: callers receive the resolved customer block plus the
-# stage-level log level. Anything that needs to branch on customer type
-# can read CUSTOMER_ENV directly from env.
 class Config(BaseModel):
     """Resolved runtime config for a single process."""
 
     log_level: LogLevel
     e2e: bool = False
-    settings: CustomerSettings
+    settings: ProviderSettings
 
 
 def load_config() -> Config:
-    """Resolve cfg[ENV][customers][CUSTOMER_ENV] -> Config.
-
-    Defaults: ENV=local, CUSTOMER_ENV=defense. Mismatched keys raise at
-    pydantic validate time — discriminated union enforces field combos.
-    """
+    """Resolve cfg[ENV] -> Config. ENV defaults to local."""
     cfg_path = Path(__file__).parent / "cfg.yml"
     with open(cfg_path) as file:
         config_map = _ConfigMap(**yaml.safe_load(file))
     env = os.environ.get("ENV", "local")
-    customer_env_raw = os.environ.get("CUSTOMER_ENV", "defense")
-    if customer_env_raw not in ("commercial", "defense", "airgapped"):
-        raise ValueError(
-            f"CUSTOMER_ENV must be commercial|defense|airgapped, got {customer_env_raw!r}"
-        )
-    customer_env: CustomerEnv = customer_env_raw  # ty: ignore[invalid-assignment]
     stage = config_map.local if env != "beta" else config_map.beta
-    return Config(
-        log_level=stage.log_level,
-        e2e=stage.e2e,
-        settings=stage.customers[customer_env],
-    )
+    return Config(log_level=stage.log_level, e2e=stage.e2e, settings=stage.settings)
 
 
 class _ZuluFormatter(logging.Formatter):
