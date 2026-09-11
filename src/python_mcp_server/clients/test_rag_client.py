@@ -49,6 +49,30 @@ def test_rrf_fuse_ranks_doc_in_both_rankings_first() -> None:
     assert fused[0][0] == "doc1"
 
 
+def test_rrf_fuse_breaks_exact_tie_in_favor_of_bm25_only_doc() -> None:
+    """A BM25-only rank-1 doc beats a cosine-only rank-1 doc on a tied score.
+
+    Real corpus case: 'Min Unsol Event Tx Delay' — a DNP3 chunk (id 1209)
+    is BM25 rank 1 and absent from cosine's top 30; a Redfish chunk
+    (id 2161) is cosine rank 1 and has zero BM25 matches in the whole
+    corpus. Both score exactly 1/61 under plain RRF, and Python's stable
+    sort previously kept whichever list rrf_fuse() saw first (cosine,
+    since callers always pass [cosine_ids, bm25_ids]) — silently
+    defeating the hybrid search's own reason for having a BM25 leg:
+    surfacing exact technical-term matches pure cosine would miss.
+    """
+    # Arrange — each doc appears in exactly one ranking, both at rank 1
+    cosine_ranking = ["cosine_only_doc"]
+    bm25_ranking = ["bm25_only_doc"]
+
+    # Act
+    fused = rrf_fuse([cosine_ranking, bm25_ranking], k=60)
+
+    # Assert
+    assert fused[0][0] == "bm25_only_doc"
+    assert fused[0][1] == fused[1][1]  # scores are genuinely tied
+
+
 def _row(doc_id: str, content: str = "") -> dict[str, object]:
     """Build a minimal energy_embeddings row for mock fetch."""
     return {

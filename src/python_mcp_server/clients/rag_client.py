@@ -25,16 +25,34 @@ def rrf_fuse(rankings: list[list[str]], k: int = RRF_K) -> list[tuple[str, float
 
     Args:
         rankings: Each inner list is an ordered list of doc ids (best first).
+            Callers pass [cosine_ids, bm25_ids] — see tie-break note below.
         k: RRF constant. Default 60 — published industry-standard, parameter-free.
 
     Returns:
         (doc_id, score) pairs sorted by score descending.
+
+    Tie-break: a doc found by exactly one retriever ties with a doc found
+    by exactly one *other* retriever at the same rank (e.g. both rank 1)
+    — a common case, not an edge case, whenever the two retrievers agree
+    on nothing. On a tie, this prefers docs present in the LAST ranking
+    (bm25_ids, by calling convention) over the FIRST (cosine_ids). Reason:
+    exact lexical matches on technical jargon — protocol field names,
+    enum values, IDs — are a rarer and stronger relevance signal than a
+    bare top cosine rank; that's the entire reason this hybrid search
+    has a BM25 leg. A plain `sorted()` here would (and did) silently
+    default to insertion order — cosine, always — defeating that leg
+    on precisely the queries it exists for.
     """
     scores: dict[str, float] = {}
     for ranking in rankings:
         for rank, doc_id in enumerate(ranking, start=1):
             scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank)
-    return sorted(scores.items(), key=lambda item: item[1], reverse=True)
+    tie_break_ids = set(rankings[-1]) if rankings else set()
+    return sorted(
+        scores.items(),
+        key=lambda item: (item[1], item[0] in tie_break_ids),
+        reverse=True,
+    )
 
 
 class RAGClient:
@@ -123,6 +141,7 @@ class RAGClient:
 
         cosine_ids = [str(row["id"]) for row in cosine_rows]
         bm25_ids = [str(row["id"]) for row in bm25_rows]
+        # bm25_ids last — rrf_fuse() breaks ties in favor of the last list.
         fused = rrf_fuse([cosine_ids, bm25_ids])
 
         ordered: list[Document] = []
